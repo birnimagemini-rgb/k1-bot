@@ -104,7 +104,7 @@ def welcome_new_member(message):
         welcome_text = (
             f"🔐 **K1 FIREWALL: KIBER-HIMOYA TIZIMI**\n\n"
             f"Tizimga xush kelibsiz, [{new_user.first_name}](tg://user?id={new_user.id})!\n"
-            f"Siz Qo'qon shahar 1-son texnikumining eng ilg'or tarmog'iga, ulandingiz. Guruhda yozish ruxsatini olish uchun xavfsizlikdan o'tishingiz shart.\n\n"
+            f"Siz eng ilg'or tarmoqqa ulandingiz. Guruhda yozish ruxsatini olish uchun xavfsizlikdan o'tishingiz shart.\n\n"
             f"🧠 **Vazifa:** Quyidagi tenglamada `x` ning qiymatini toping. (Tenglamani yechishga erinmang!!!)\n\n"
             f"👉 **{question}**\n"
             f"❓ **x = ?**"
@@ -129,14 +129,28 @@ def verify_user(call):
             bot.answer_callback_query(call.id, "✅ Kod qabul qilindi! K1 tarmog'iga ruxsat berildi.", show_alert=True)
             
             try:
+                # 1. Yozishga ruxsat berish
                 bot.restrict_chat_member(
                     call.message.chat.id, target_user_id, 
                     can_send_messages=True, can_send_media_messages=True,
                     can_send_other_messages=True, can_add_web_page_previews=True
                 )
+                
+                # 2. Tenglama xabarini o'chirib tashlash
                 bot.delete_message(call.message.chat.id, call.message.message_id)
-            except:
-                pass
+                
+                # 3. 🎉 QOIDALARNI TUSHUNTIRUVCHI YANGI XABAR
+                success_text = (
+                    f"🟢 **Tizimga to'liq ulandingiz, [{call.from_user.first_name}](tg://user?id={target_user_id})!**\n\n"
+                    f"💎 **K1-Coin qanday yig'iladi?**\n"
+                    f"Guruhda qiziqarli IT yangiliklar ulashing, zo'r kodlar tashlang, tengdoshlaringizga yordam bering va eng muhimi — guruhda LIDER bo'ling! Foydali xabarlaringiz uchun adminlar tomonidan sizga maxsus tangalar taqdim etiladi.\n\n"
+                    f"⚠️ **Muhim eslatma:** *Bu guruhdagi tangalar sizning asosiy o'qish balansingizga ta'sir o'tkazmaydi. Ular faqatgina guruh reytingini aniqlash va qiziqarli raqobat uchun ishlaydi.*\n\n"
+                    f"🚀 Dasturlashga doir ma'lumotlar tashlab `/top` reytingida 1-o'ringa chiqing! Omad!"
+                )
+                bot.send_message(call.message.chat.id, success_text, parse_mode='Markdown')
+                
+            except Exception as e:
+                print(f"Ruxsat berishda xato: {e}")
         else:
             # XATO JAVOB
             bot.answer_callback_query(call.id, "❌ Noto'g'ri javob! Qaytadan hisoblang.", show_alert=True)
