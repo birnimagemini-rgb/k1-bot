@@ -3,6 +3,8 @@ from telebot import types
 import sqlite3
 import random
 import os
+import time
+import threading
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -43,68 +45,68 @@ def update_user(user_id, first_name, amount):
 
 
 # ==========================================
+# ORQA FONDA XABARNI O'CHIRISH FUNKSIYASI (30 soniya uchun)
+# ==========================================
+def delete_message_later(chat_id, message_id, delay):
+    time.sleep(delay)
+    try:
+        bot.delete_message(chat_id, message_id)
+    except Exception:
+        pass
+
+
+# ==========================================
 # 1-QISM: YANGI A'ZOLARNI KUTIB OLISH VA TENGLAMA BERISH
 # ==========================================
 @bot.message_handler(content_types=['new_chat_members'])
 def welcome_new_member(message):
     for new_user in message.new_chat_members:
-        # Agar botning o'zi qo'shilsa, indamaydi
         if new_user.id == bot.get_me().id:
             continue 
 
-        # 1. Darhol Mute qilish (Yozishni taqiqlash)
         try:
             bot.restrict_chat_member(message.chat.id, new_user.id, can_send_messages=False)
         except Exception as e:
-            print(f"Bloklashda xato (Bot admin bo'lmasligi mumkin): {e}")
+            print(f"Bloklashda xato: {e}")
 
-        # 2. Tasodifiy 5-sinf tenglamasini yaratish (x ni topish)
         eq_type = random.choice(['add', 'sub', 'mul'])
         
         if eq_type == 'add':
-            # x + A = B
             x_val = random.randint(2, 15)
             a_val = random.randint(1, 15)
             question = f"x + {a_val} = {x_val + a_val}"
         elif eq_type == 'sub':
-            # x - A = B
             x_val = random.randint(10, 30)
             a_val = random.randint(1, x_val - 1)
             question = f"x - {a_val} = {x_val - a_val}"
         else:
-            # A * x = B
             a_val = random.randint(2, 9)
             x_val = random.randint(2, 10)
             question = f"{a_val} ✖️ x = {a_val * x_val}"
             
         correct_answer = x_val
 
-        # 3. 4 ta variant yaratish (1 ta to'g'ri, 3 ta xato)
         options = [correct_answer]
         while len(options) < 4:
             fake_answer = correct_answer + random.randint(-5, 5)
             if fake_answer not in options and fake_answer >= 0:
                 options.append(fake_answer)
         
-        # Variantlarni aralashtirib tashlash
         random.shuffle(options)
 
-        # 4. Tugmalarni yasash
         markup = types.InlineKeyboardMarkup()
         buttons = []
         for opt in options:
             cb_data = f"verify_{new_user.id}_pass" if opt == correct_answer else f"verify_{new_user.id}_fail"
             buttons.append(types.InlineKeyboardButton(text=str(opt), callback_data=cb_data))
         
-        # Tugmalarni 2 tadan qilib 2 qatorga terish
         markup.add(buttons[0], buttons[1])
         markup.add(buttons[2], buttons[3])
 
-        # 5. Kiber-uslubdagi chiroyli xush kelibsiz matni
         welcome_text = (
             f"🔐 **K1 FIREWALL: KIBER-HIMOYA TIZIMI**\n\n"
             f"Tizimga xush kelibsiz, [{new_user.first_name}](tg://user?id={new_user.id})!\n"
-            f"Siz eng ilg'or tarmoqqa ulandingiz. Guruhda yozish ruxsatini olish uchun xavfsizlikdan o'tishingiz shart.\n\n"
+            f"Siz ilg'or tarmoqqa ulandingiz. Guruhda yozish ruxsatini olish uchun xavfsizlikdan o'tishingiz shart.\n\n"
             f"🧠 **Vazifa:** Quyidagi tenglamada `x` ning qiymatini toping. (Tenglamani yechishga erinmang!!!)\n\n"
             f"👉 **{question}**\n"
             f"❓ **x = ?**"
@@ -122,40 +124,39 @@ def verify_user(call):
     target_user_id = int(data_parts[1])
     action = data_parts[2]
 
-    # Faqat yangi qo'shilgan odamgina o'z tugmasini bosa oladi
     if call.from_user.id == target_user_id:
         if action == 'pass':
-            # TO'G'RI JAVOB
             bot.answer_callback_query(call.id, "✅ Kod qabul qilindi! K1 tarmog'iga ruxsat berildi.", show_alert=True)
             
             try:
-                # 1. Yozishga ruxsat berish
+                # 1. Yozishga ruxsat
                 bot.restrict_chat_member(
                     call.message.chat.id, target_user_id, 
                     can_send_messages=True, can_send_media_messages=True,
                     can_send_other_messages=True, can_add_web_page_previews=True
                 )
                 
-                # 2. Tenglama xabarini o'chirib tashlash
+                # 2. Tenglamani o'chirish
                 bot.delete_message(call.message.chat.id, call.message.message_id)
                 
-                # 3. 🎉 QOIDALARNI TUSHUNTIRUVCHI YANGI XABAR
+                # 3. KENGAYTIRILGAN YANGI XABAR
                 success_text = (
                     f"🟢 **Tizimga to'liq ulandingiz, [{call.from_user.first_name}](tg://user?id={target_user_id})!**\n\n"
                     f"💎 **K1-Coin qanday yig'iladi?**\n"
-                    f"Guruhda qiziqarli IT yangiliklar ulashing, zo'r kodlar tashlang, tengdoshlaringizga yordam bering va eng muhimi — guruhda LIDER bo'ling! Foydali xabarlaringiz uchun adminlar tomonidan sizga maxsus tangalar taqdim etiladi.\n\n"
+                    f"Guruhda qiziqarli yangiliklar ulashing (nafaqat IT, balki o'zingiz qiziqqan boshqa yo'nalishlardagi foydali ma'lumotlarni ham), bilimlaringiz bilan bo'lishing, tengdoshlaringizga yordam bering va eng muhimi — guruhda LIDER bo'ling! Foydali xabarlaringiz uchun adminlar tomonidan sizga maxsus tangalar taqdim etiladi.\n\n"
                     f"⚠️ **Muhim eslatma:** *Bu guruhdagi tangalar sizning asosiy o'qish balansingizga ta'sir o'tkazmaydi. Ular faqatgina guruh reytingini aniqlash va qiziqarli raqobat uchun ishlaydi.*\n\n"
-                    f"🚀 Dasturlashga doir ma'lumotlar tashlab `/top` reytingida 1-o'ringa chiqing! Omad!"
+                    f"🚀 Foydali ma'lumotlar tashlab `/top` reytingida 1-o'ringa chiqing! Omad!"
                 )
-                bot.send_message(call.message.chat.id, success_text, parse_mode='Markdown')
+                sent_msg = bot.send_message(call.message.chat.id, success_text, parse_mode='Markdown')
+                
+                # 4. TAYMER: Xabarni 30 soniyadan so'ng avtomatik o'chirish
+                threading.Thread(target=delete_message_later, args=(call.message.chat.id, sent_msg.message_id, 30)).start()
                 
             except Exception as e:
                 print(f"Ruxsat berishda xato: {e}")
         else:
-            # XATO JAVOB
             bot.answer_callback_query(call.id, "❌ Noto'g'ri javob! Qaytadan hisoblang.", show_alert=True)
     else:
-        # Boshqalar bossa chiqadigan ogohlantirish
         bot.answer_callback_query(call.id, "🛑 Ruxsat yo'q! Bu mantiqiy test faqat yangi a'zolar uchun.", show_alert=True)
 
 
@@ -212,6 +213,7 @@ def show_top(message):
         
     text += "\n💡 *K1-Coin yig'ish uchun darslarda faol bo'ling va vazifalarni bajaring!*"
     bot.send_message(message.chat.id, text, parse_mode='Markdown')
+
 
 # ==========================================
 # BOTNI ISHGA TUSHIRISH
