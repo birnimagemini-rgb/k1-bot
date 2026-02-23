@@ -1,0 +1,16 @@
+# Maxfiy ma'lumotlar
+.env
+.env.local
+
+# SQLite baza (runtime ma'lumotlar)
+k1_guruh_coins.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+*.so
+.venv/
+venv/
+env/
