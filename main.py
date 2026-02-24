@@ -112,10 +112,13 @@ def welcome_new_member(message):
         welcome_text = (
             f"🔐 **K1 FIREWALL: KIBER-HIMOYA TIZIMI**\n\n"
             f"Tizimga xush kelibsiz, [{new_user.first_name}](tg://user?id={new_user.id})!\n"
-            f"Siz Qo'qon shahar 1-son texnikumining eng ilg'or tarmog'iga ulandingiz. Guruhda yozish ruxsatini olish uchun xavfsizlikdan o'tishingiz shart.\n\n"
-            f"🧠 **Vazifa:** Quyidagi tenglamada `x` ning qiymatini toping. (Tenglamani yechishga erinmang!!!)\n\n"
+            f"Siz Qo'qon shahar 1-son texnikumining yopiq tarmog'iga ulandingiz.\n\n"
+            f"⚠️ **DIQQAT: SIZ HOZIR MUTE (Yozish huquqi yo'q) HOLATIDASIZ!**\n"
+            f"Guruhda yoza olishingiz uchun inson ekanligingizni tasdiqlashingiz shart. Bu juda oson:\n\n"
+            f"🧠 **Vazifa:** Pastdagi tenglamada `x` ning o'rniga qaysi raqam tushishini toping va mos keladigan tugmani bosing.\n\n"
             f"👉 **{question}**\n"
-            f"❓ **x = ?**"
+            f"❓ **x = ?**\n\n"
+            f"*(Tenglamani yechishga erinmang!)*"
         )
 
         bot.send_message(message.chat.id, welcome_text, parse_mode='Markdown', reply_markup=markup)
