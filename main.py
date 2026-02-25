@@ -3,6 +3,7 @@ from telebot import types
 import psycopg2
 import random
 import os
+import re
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from dotenv import load_dotenv
@@ -259,6 +260,56 @@ def show_top(message):
 
     text += "\n💡 *K1-Coin yig'ish uchun darslarda faol bo'ling va vazifalarni bajaring!*"
     bot.send_message(message.chat.id, text, parse_mode='Markdown')
+
+
+# ==========================================
+# 5-QISM: LINK VA REKLAMA FILTRI
+# ==========================================
+LINK_PATTERN = re.compile(
+    r'(https?://\S+|www\.\S+|t\.me/\S+|@\w{5,}|\S+\.(com|net|org|ru|uz|io|gg|tv|me|app)\b)',
+    re.IGNORECASE
+)
+
+def contains_link(message):
+    """Matn, caption yoki entity orqali link borligini tekshiradi."""
+    # Telegram entity lari orqali (URL, text_link, mention)
+    if message.entities:
+        link_types = {'url', 'text_link', 'mention'}
+        for e in message.entities:
+            if e.type in link_types:
+                return True
+    if message.caption_entities:
+        for e in message.caption_entities:
+            if e.type in {'url', 'text_link', 'mention'}:
+                return True
+    # Matn ichida regex bilan qidirish
+    text = message.text or message.caption or ''
+    if LINK_PATTERN.search(text):
+        return True
+    return False
+
+@bot.message_handler(
+    func=lambda m: m.chat.type in ('group', 'supergroup')
+                   and m.from_user.id != ADMIN_ID
+                   and contains_link(m)
+)
+def delete_link_message(message):
+    user = message.from_user
+    try:
+        bot.delete_message(message.chat.id, message.message_id)
+    except Exception as e:
+        print(f"Xabarni o'chirishda xato: {e}")
+        return
+
+    warn_text = (
+        f"🚫 [{user.first_name}](tg://user?id={user.id}), xabaring o'chirildi!\n\n"
+        f"⛔️ *Bu guruhda link va reklama joylash TAQIQLANGAN!*\n\n"
+        f"📌 K1 guruhi o'quv muhiti uchun mo'ljallangan — reklama, havola va "
+        f"begona bot/kanallar uchun emas.\n\n"
+        f"_Qoidani yana buzgan taqdirda guruhdan chiqarib yuborilasiz._"
+    )
+    sent = bot.send_message(message.chat.id, warn_text, parse_mode='Markdown')
+    threading.Timer(20.0, auto_delete_message, args=(message.chat.id, sent.message_id)).start()
 
 
 # ==========================================
