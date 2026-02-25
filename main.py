@@ -288,11 +288,24 @@ def contains_link(message):
         return True
     return False
 
-@bot.message_handler(
-    func=lambda m: m.chat.type in ('group', 'supergroup')
-                   and m.from_user.id != ADMIN_ID
-                   and contains_link(m)
-)
+def is_forbidden_message(m):
+    """Link, inline bot yoki o'yin xabarlarini aniqlaydi."""
+    if m.chat.type not in ('group', 'supergroup'):
+        return False
+    if m.from_user.id == ADMIN_ID:
+        return False
+    # Inline bot orqali yuborilgan (@dondonzikibot kabi)
+    if getattr(m, 'via_bot', None):
+        return True
+    # O'yin xabarlari
+    if getattr(m, 'game', None):
+        return True
+    # Link va mention
+    if contains_link(m):
+        return True
+    return False
+
+@bot.message_handler(func=is_forbidden_message)
 def delete_link_message(message):
     user = message.from_user
     try:
@@ -301,11 +314,15 @@ def delete_link_message(message):
         print(f"Xabarni o'chirishda xato: {e}")
         return
 
+    # Sabab aniqlanadi
+    if getattr(message, 'via_bot', None) or getattr(message, 'game', None):
+        sabab = "🎮 *Bu guruhda o'yin va inline botlar TAQIQLANGAN!*\n\n📌 K1 guruhi faqat o'quv muhiti uchun — o'yinlar uchun emas."
+    else:
+        sabab = "⛔️ *Bu guruhda link va reklama joylash TAQIQLANGAN!*\n\n📌 K1 guruhi o'quv muhiti uchun mo'ljallangan — reklama va begona kanallar uchun emas."
+
     warn_text = (
         f"🚫 [{user.first_name}](tg://user?id={user.id}), xabaring o'chirildi!\n\n"
-        f"⛔️ *Bu guruhda link va reklama joylash TAQIQLANGAN!*\n\n"
-        f"📌 K1 guruhi o'quv muhiti uchun mo'ljallangan — reklama, havola va "
-        f"begona bot/kanallar uchun emas.\n\n"
+        f"{sabab}\n\n"
         f"_Qoidani yana buzgan taqdirda guruhdan chiqarib yuborilasiz._"
     )
     sent = bot.send_message(message.chat.id, warn_text, parse_mode='Markdown')
